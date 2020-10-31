@@ -1,0 +1,170 @@
+
+*paired-end dataset (forward and reverse reads in separate files)*
+FB-SUNIL-UNIS-NORWAY_S1_L001_R1_001.fastq.gz
+FB-SUNIL-UNIS-NORWAY_S1_L001_R2_001.fastq.gz
+
+*preparing mapping files*
+mappingfile_sabre_fences_barcodeprimer_forward.txt
+mappingfile_sabre_fences_barcodeprimer_reverse.txt
+
+
+desclaimer: before and after the analysis the data were checked for positions and number of barcodes and primers to assure that they will be first recognized and properly removed
+
+
++++++++++++++++++++++
++++ FORWARD READS +++
++++++++++++++++++++++
+
+###DEMULTIPLEXING
+sabre pe -f FB-SUNIL-UNIS-NORWAY_S1_L001_R1_001.fastq.gz -r FB-SUNIL-UNIS-NORWAY_S1_L001_R2_001.fastq.gz -b mappingfile_sabre_fences_barcodeprimer_forward.txt -u no_bc_match_R1.fq -w no_bc_match_R2.fq -m 1 -c
+
+
+
+###make a directory for all these demultiplexed files
+mkdir FENCES_FWD
+mv *.fq ./FENCES_FWD/
+
+
+
+###CUTADAPT
+
+cd ./FENCES_FWD/
+
+for i in *_R1.fq
+do
+  SAMPLE=$(echo ${i} | sed "s/_R1\.fq//")
+  echo ${SAMPLE}_R1.fq
+cutadapt --max-n=0 -a 'GCATATCAATAAGCGGAGGA' -b 'GTGAATCATCGAATCTTTG' -b 'CAAAGATTCGATGATTCAC' ${SAMPLE}_R1.fq > ${SAMPLE}_cutadapt_R1.fq 2> report_FWD_R1.txt
+done
+
+
+for i in *_R2.fq
+do
+  SAMPLE=$(echo ${i} | sed "s/_R2\.fq//")
+  echo ${SAMPLE}_R2.fq
+cutadapt --max-n=0 -a 'CAAAGATTCGATGATTCAC' -b 'TCCTCCGCTTATTGATATGC' -b 'GCATATCAATAAGCGGAGGA' ${SAMPLE}_R2.fq > ${SAMPLE}_cutadapt_R2.fq 2> report_FWD_R2.txt
+done
+
+
+
+###now I need to check the order of sequences, for this I need to make a loop that takes 2 corresponding files and runs the program
+
+
+### script below 
+#!/bin/bash
+
+for R1 in *cutadapt_R1*
+do
+        R2=${R1//cutadapt_R1.fq/cutadapt_R2.fq}
+        python ./fastqCombinePairedEnd.py ${R1} ${R2}
+done
+
+
+
+###clean up the files 
+mkdir 1_demultiplex
+mv *FWD_R* ./1_demultiplex/
+
+mkdir 2_cutadapt
+mv *.fq ./2_cutadapt/
+
+mkdir 3_keep_pairs
+mv *pairs* ./3_keep_pairs/
+
+
+
+###rename output files
+cd 3_keep_pairs/
+
+mkdir fencesA_FWD
+mv *R1* ./fencesA_FWD/
+
+for file in *.fastq; do mv "$file" "`echo $file | sed "s/.FWD_cutadapt_R1.fq_pairs_R1.fastq/_fencesA_R1.fq/"`"; done
+
+mkdir fencesA_REV
+mv *R2* ./fencesA_REV/
+
+for file in *.fastq; do mv "$file" "`echo $file | sed "s/.FWD_cutadapt_R2.fq_pairs_R2.fastq/_fencesA_R2.fq/"`"; done
+
+
+
+###copy and R
+
+
+
+
+
++++++++++++++++++++++
++++ REVERSE READS +++
++++++++++++++++++++++
+
+###DEMULTIPLEXING
+sabre pe -f FB-SUNIL-UNIS-NORWAY_S1_L001_R1_001.fastq.gz -r FB-SUNIL-UNIS-NORWAY_S1_L001_R2_001.fastq.gz -b mappingfile_sabre_fences_barcodeprimer_reverse.txt -u no_bc_match_R1.fq -w no_bc_match_R2.fq -m 1 -c
+
+
+
+###make a directory for all these demultiplexed files
+mkdir FENCES_REV
+mv *.fq ./FENCES_REV/
+
+
+
+###CUTADAPT
+for i in *_R1.fq
+do
+  SAMPLE=$(echo ${i} | sed "s/_R1\.fq//")
+  echo ${SAMPLE}_R1.fq
+cutadapt --max-n=0 -a 'CAAAGATTCGATGATTCAC' -b 'GTGAATCATCGAATCTTTG' -b 'TCCTCCGCTTATTGATATGC' -b 'GCATATCAATAAGCGGAGGA' ${SAMPLE}_R1.fq > ${SAMPLE}_cutadapt_R1.fq 2> report_REV_R1.txt
+done
+
+
+for i in *_R2.fq
+do
+  SAMPLE=$(echo ${i} | sed "s/_R2\.fq//")
+  echo ${SAMPLE}_R2.fq
+cutadapt --max-n=0 -a 'GCATATCAATAAGCGGAGGA' -b 'GTGAATCATCGAATCTTTG' -b 'CAAAGATTCGATGATTCAC' ${SAMPLE}_R2.fq > ${SAMPLE}_cutadapt_R2.fq 2> report_REV_R2.txt
+done
+
+
+
+###now I need to check the order of sequences, for this I need to make a loop that takes 2 corresponding files and runs the program
+
+#!/bin/bash
+
+for R1 in *cutadapt_R1*
+do
+        R2=${R1//cutadapt_R1.fq/cutadapt_R2.fq}
+        python /usit/abel/u1/magdalenaw/apps/z_scripts/fastqCombinePairedEnd.py ${R1} ${R2}
+done
+
+
+
+###clean up the files 
+
+mkdir 1_demultiplex_REV
+mv *REV_R* ./1_demultiplex_REV/
+
+mkdir 2_cutadapt_REV
+mv *.fq ./2_cutadapt_REV/
+
+mkdir 3_keep_pairs_REV
+mv *pairs* ./3_keep_pairs/
+
+
+
+###rename output files
+
+cd 3_keep_pairs_REV/
+
+mkdir fencesB_FWD
+mv *R1* ./fencesB_FWD/
+
+mkdir fencesB_REV
+mv *R2* ./fencesB_REV/
+
+for file in *.fastq; do mv "$file" "`echo $file | sed "s/.REV_cutadapt_R1.fq_pairs_R1.fastq/_fencesB_R1.fq/"`"; done
+
+
+for file in *.fastq; do mv "$file" "`echo $file | sed "s/.REV_cutadapt_R2.fq_pairs_R2.fastq/_fencesB_R2.fq/"`"; done
+
+copy and R
