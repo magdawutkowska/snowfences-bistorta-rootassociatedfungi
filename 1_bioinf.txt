@@ -1,3 +1,6 @@
+#script by Magdalena Wutkowska (magda.wutkowska@gmail.com) written in 2019
+
+
 
 *paired-end dataset (forward and reverse reads in separate files)*
 FB-SUNIL-UNIS-NORWAY_S1_L001_R1_001.fastq.gz
